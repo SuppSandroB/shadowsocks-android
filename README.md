@@ -6,7 +6,7 @@ A [shadowsocks](http://shadowsocks.org) client for Android, written in Scala.
 
 ### CI STATUS
 
-[![Build Status](https://api.travis-ci.org/shadowsocks/shadowsocks-android.svg)](https://travis-ci.org/shadowsocks/shadowsocks-android)
+[![Build Status](https://api.travis-ci.org/SuppSandroB/shadowsocks-android.svg)](https://travis-ci.org/SuppSandroB/shadowsocks-android)
 
 ### PREREQUISITES
 
