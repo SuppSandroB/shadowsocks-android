@@ -222,7 +222,7 @@ include $(CLEAR_VARS)
 LIBEVENT_SOURCES := \
 	buffer.c \
 	bufferevent.c bufferevent_filter.c \
-	bufferevent_openssl.c bufferevent_pair.c bufferevent_ratelim.c \
+	bufferevent_pair.c bufferevent_ratelim.c \
 	bufferevent_sock.c epoll.c \
 	epoll_sub.c evdns.c event.c \
     event_tagging.c evmap.c \
@@ -236,7 +236,6 @@ LOCAL_MODULE := event
 LOCAL_SRC_FILES := $(addprefix libevent/, $(LIBEVENT_SOURCES))
 LOCAL_CFLAGS := -O2 -I$(LOCAL_PATH)/libevent \
 	-I$(LOCAL_PATH)/libevent/include \
-	-I$(LOCAL_PATH)/openssl/include
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -331,10 +330,11 @@ include $(BUILD_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libev
-LOCAL_CFLAGS += -O2 -DNDEBUG -DHAVE_CONFIG_H
+LOCAL_CFLAGS += -O2 -DNDEBUG -DHAVE_CONFIG_H \
+				-I$(LOCAL_PATH)/include/libev
 LOCAL_SRC_FILES := \
-	libev/ev.c \
-	libev/event.c 
+	shadowsocks-libev/libev/ev.c \
+	shadowsocks-libev/libev/event.c 
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -370,7 +370,10 @@ PDNSD_SOURCES  := $(wildcard $(LOCAL_PATH)/pdnsd/src/*.c)
 
 LOCAL_MODULE    := pdnsd
 LOCAL_SRC_FILES := $(PDNSD_SOURCES:$(LOCAL_PATH)/%=%)
-LOCAL_CFLAGS    := -DANDROID -Wall -O2 -I$(LOCAL_PATH)/pdnsd
+LOCAL_CFLAGS    := -DANDROID -Wall -O2 -I$(LOCAL_PATH)/pdnsd \
+				   -I$(LOCAL_PATH)/include/pdnsd -I$(LOCAL_PATH)/libancillary
+LOCAL_STATIC_LIBRARIES := libancillary
+LOCAL_LDLIBS := -llog
 
 include $(BUILD_EXECUTABLE)
 
@@ -380,23 +383,29 @@ include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
 
-SHADOWSOCKS_SOURCES := local.c cache.c udprelay.c encrypt.c utils.c netutils.c json.c jconf.c acl.c android.c
+SHADOWSOCKS_SOURCES := local.c cache.c udprelay.c encrypt.c \
+	utils.c netutils.c json.c jconf.c acl.c http.c tls.c rule.c \
+	android.c
 
 LOCAL_MODULE    := ss-local
 LOCAL_SRC_FILES := $(addprefix shadowsocks-libev/src/, $(SHADOWSOCKS_SOURCES))
 LOCAL_CFLAGS    := -Wall -O2 -fno-strict-aliasing -DMODULE_LOCAL \
-					-DUSE_CRYPTO_OPENSSL -DANDROID -DHAVE_CONFIG_H \
+					-DUSE_CRYPTO_MBEDTLS -DANDROID -DHAVE_CONFIG_H \
+					-DCONNECT_IN_PROGRESS=EINPROGRESS \
+					-I$(LOCAL_PATH)/include/shadowsocks-libev \
 					-I$(LOCAL_PATH)/include \
-					-I$(LOCAL_PATH)/libev \
 					-I$(LOCAL_PATH)/libancillary \
-					-I$(LOCAL_PATH)/openssl/include  \
+					-I$(LOCAL_PATH)/mbedtls/include  \
+					-I$(LOCAL_PATH)/pcre \
 					-I$(LOCAL_PATH)/shadowsocks-libev/libudns \
 					-I$(LOCAL_PATH)/shadowsocks-libev/libcork/include \
 					-I$(LOCAL_PATH)/shadowsocks-libev/libsodium/src/libsodium/include \
 					-I$(LOCAL_PATH)/shadowsocks-libev/libsodium/src/libsodium/include/sodium \
-					-I$(LOCAL_PATH)/shadowsocks-libev/libipset/include
+					-I$(LOCAL_PATH)/shadowsocks-libev/libipset/include \
+					-I$(LOCAL_PATH)/shadowsocks-libev/libev
 
-LOCAL_STATIC_LIBRARIES := libev libcrypto libipset libcork libudns libsodium libancillary
+LOCAL_STATIC_LIBRARIES := libev libmbedtls libipset libcork libudns \
+	libsodium libancillary libpcre
 
 LOCAL_LDLIBS := -llog
 
@@ -413,17 +422,19 @@ SHADOWSOCKS_SOURCES := tunnel.c cache.c udprelay.c encrypt.c utils.c netutils.c 
 LOCAL_MODULE    := ss-tunnel
 LOCAL_SRC_FILES := $(addprefix shadowsocks-libev/src/, $(SHADOWSOCKS_SOURCES))
 LOCAL_CFLAGS    := -Wall -O2 -fno-strict-aliasing -DMODULE_TUNNEL \
-					-DUSE_CRYPTO_OPENSSL -DANDROID -DHAVE_CONFIG_H -DSSTUNNEL_JNI \
-					-I$(LOCAL_PATH)/libev \
+					-DUSE_CRYPTO_MBEDTLS -DANDROID -DHAVE_CONFIG_H -DSSTUNNEL_JNI \
+					-DCONNECT_IN_PROGRESS=EINPROGRESS \
 					-I$(LOCAL_PATH)/libancillary \
 					-I$(LOCAL_PATH)/include \
 					-I$(LOCAL_PATH)/shadowsocks-libev/libudns \
 					-I$(LOCAL_PATH)/shadowsocks-libev/libcork/include \
 					-I$(LOCAL_PATH)/shadowsocks-libev/libsodium/src/libsodium/include \
 					-I$(LOCAL_PATH)/shadowsocks-libev/libsodium/src/libsodium/include/sodium \
-					-I$(LOCAL_PATH)/openssl/include 
+					-I$(LOCAL_PATH)/mbedtls/include \
+					-I$(LOCAL_PATH)/shadowsocks-libev/libev \
+					-I$(LOCAL_PATH)/include/shadowsocks-libev
 
-LOCAL_STATIC_LIBRARIES := libev libcrypto libsodium libcork libudns libancillary
+LOCAL_STATIC_LIBRARIES := libev libmbedtls libsodium libcork libudns libancillary
 
 LOCAL_LDLIBS := -llog
 
@@ -540,21 +551,61 @@ LOCAL_SRC_FILES := $(addprefix badvpn/, $(TUN2SOCKS_SOURCES))
 
 include $(BUILD_EXECUTABLE)
 
-# OpenSSL
-openssl_subdirs := $(addprefix $(LOCAL_PATH)/openssl/,$(addsuffix /Android.mk, \
-	crypto \
-	ssl \
-	))
-include $(openssl_subdirs)
+########################################################
+## mbed TLS 
+########################################################
 
-# Iptables
-# LOCAL_PATH := $(ROOT_PATH)
-# iptables_subdirs := $(addprefix $(LOCAL_PATH)/iptables/,$(addsuffix /Android.mk, \
-# 	iptables \
-# 	extensions \
-# 	libiptc \
-# 	))
-# include $(iptables_subdirs)
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := mbedtls
+
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/mbedtls/include
+
+MBEDTLS_SOURCES := $(wildcard $(LOCAL_PATH)/mbedtls/library/*.c)
+
+LOCAL_SRC_FILES := $(MBEDTLS_SOURCES:$(LOCAL_PATH)/%=%)
+
+include $(BUILD_STATIC_LIBRARY)
+
+########################################################
+## pcre 
+########################################################
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := pcre 
+
+LOCAL_CFLAGS += -DHAVE_CONFIG_H
+
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/pcre/dist $(LOCAL_PATH)/pcre
+
+libpcre_src_files := \
+    pcre_chartables.c \
+    dist/pcre_byte_order.c \
+    dist/pcre_compile.c \
+    dist/pcre_config.c \
+    dist/pcre_dfa_exec.c \
+    dist/pcre_exec.c \
+    dist/pcre_fullinfo.c \
+    dist/pcre_get.c \
+    dist/pcre_globals.c \
+    dist/pcre_jit_compile.c \
+    dist/pcre_maketables.c \
+    dist/pcre_newline.c \
+    dist/pcre_ord2utf8.c \
+    dist/pcre_refcount.c \
+    dist/pcre_string_utils.c \
+    dist/pcre_study.c \
+    dist/pcre_tables.c \
+    dist/pcre_ucd.c \
+    dist/pcre_valid_utf8.c \
+    dist/pcre_version.c \
+    dist/pcre_xclass.c
+
+LOCAL_SRC_FILES := $(addprefix pcre/, $(libpcre_src_files))
+
+include $(BUILD_STATIC_LIBRARY)
 
 # Import cpufeatures
 $(call import-module,android/cpufeatures)
+

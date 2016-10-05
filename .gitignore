@@ -14,6 +14,8 @@ gen_*
 *.class
 *.o
 local.sbt
+.deps
+/proguard-sbt.txt
 
 #Intellij IDEA
 *.iml
@@ -21,12 +23,11 @@ local.sbt
 *.iws
 .idea/
 out/
+.d
 
 #NDK
 src/main/obj
 src/main/libs
-src/main/assets/armeabi
-src/main/assets/armeabi-v7a
-src/main/assets/x86
-src/main/assets/api-16/
+src/main/assets/armeabi-v7a/*
+src/main/assets/x86/*
 jni/Application.mk

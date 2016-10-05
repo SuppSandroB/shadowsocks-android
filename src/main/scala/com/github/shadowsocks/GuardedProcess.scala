@@ -39,23 +39,41 @@
 
 package com.github.shadowsocks
 
-import java.io.{IOException, InputStream, OutputStream}
+import java.io._
 import java.lang.System.currentTimeMillis
 import java.util.concurrent.Semaphore
 
 import android.util.Log
 
 import scala.collection.JavaConversions._
+import scala.collection.immutable.Stream
+import scala.util.control.Exception._
+
+class StreamLogger(is: InputStream, tag: String) extends Thread {
+
+  def withCloseable[T <: Closeable, R](t: T)(f: T => R): R = {
+    allCatch.andFinally{t.close} apply { f(t) }
+  }
+
+  override def run() {
+    withCloseable(new BufferedReader(new InputStreamReader(is))) {
+      br => try Stream.continually(br.readLine()).takeWhile(_ != null).foreach(Log.i(tag, _)) catch {
+        case ignore: IOException =>
+      }
+    }
+  }
+}
 
 /**
   * @author ayanamist@gmail.com
   */
-class GuardedProcess(cmd: Seq[String]) extends Process {
+class GuardedProcess(cmd: Seq[String]) {
   private val TAG = classOf[GuardedProcess].getSimpleName
 
   @volatile private var guardThread: Thread = _
   @volatile private var isDestroyed: Boolean = _
   @volatile private var process: Process = _
+  @volatile private var isRestart = false
 
   def start(onRestartCallback: () => Unit = null): GuardedProcess = {
     val semaphore = new Semaphore(1)
@@ -71,15 +89,25 @@ class GuardedProcess(cmd: Seq[String]) extends Process {
 
           process = new ProcessBuilder(cmd).redirectErrorStream(true).start
 
+          val is = process.getInputStream
+          new StreamLogger(is, TAG).start
+
           if (callback == null) callback = onRestartCallback else callback()
 
           semaphore.release
           process.waitFor
 
-          if (currentTimeMillis - startTime < 1000) {
-            Log.w(TAG, "process exit too fast, stop guard: " + cmd)
-            isDestroyed = true
+          this.synchronized {
+            if (isRestart) {
+              isRestart = false
+            } else {
+              if (currentTimeMillis - startTime < 1000) {
+                Log.w(TAG, "process exit too fast, stop guard: " + cmd)
+                isDestroyed = true
+              }
+            }
           }
+
         }
       } catch {
         case ignored: InterruptedException =>
@@ -108,10 +136,12 @@ class GuardedProcess(cmd: Seq[String]) extends Process {
     }
   }
 
-  def exitValue: Int = throw new UnsupportedOperationException
-  def getErrorStream: InputStream = throw new UnsupportedOperationException
-  def getInputStream: InputStream = throw new UnsupportedOperationException
-  def getOutputStream: OutputStream = throw new UnsupportedOperationException
+  def restart() {
+    this.synchronized {
+      isRestart = true
+      process.destroy()
+    }
+  }
 
   @throws(classOf[InterruptedException])
   def waitFor = {

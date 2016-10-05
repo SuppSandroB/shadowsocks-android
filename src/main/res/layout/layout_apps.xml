@@ -18,8 +18,8 @@
             android:text="@string/on"
             android:textSize="18sp"
             android:textColor="?android:attr/textColorSecondary"
-            android:paddingLeft="60dp"
-            android:paddingRight="8dp"
+            android:paddingStart="60dp"
+            android:paddingEnd="8dp"
             android:paddingTop="12dp"
             android:paddingBottom="12dp"
             android:layout_width="match_parent"
@@ -30,8 +30,8 @@
             android:text="@string/bypass_apps"
             android:textSize="18sp"
             android:textColor="?android:attr/textColorSecondary"
-            android:paddingLeft="60dp"
-            android:paddingRight="8dp"
+            android:paddingStart="60dp"
+            android:paddingEnd="8dp"
             android:paddingTop="12dp"
             android:paddingBottom="12dp"
             android:layout_width="match_parent"
@@ -45,7 +45,7 @@
                  android:layout_width="wrap_content"
                  android:layout_height="wrap_content"
                  android:layout_gravity="center" />
-    <ListView
+    <android.support.v7.widget.RecyclerView
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
             android:id="@+id/applistview"

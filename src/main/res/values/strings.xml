@@ -2,10 +2,9 @@
 <resources>
 
   <string name="app_name">Shadowsocks</string>
-  <string name="screen_name" translatable="false">shadowsocks</string>
+  <string name="quick_toggle">Toggle</string>
 
   <!-- global/misc category -->
-  <string name="global_cat">Global Settings</string>
   <string name="misc_cat">Misc</string>
   <string name="profile">Profile</string>
   <string name="profile_summary">Switch to another profile or add new profiles</string>
@@ -15,7 +14,7 @@
   <string name="stat_summary">Sent: \t\t\t\t\t%3$s\t↑\t%1$s/s\nReceived: \t%4$s\t↓\t%2$s/s</string>
   <string name="stat_profiles">\n%1$s↑\t%2$s↓</string>
   <string name="traffic_summary">%1$s/s↑\t%2$s/s↓</string>
-  <plurals name="bytes">
+  <plurals name="bytes" translatable="false">
     <item quantity="one">Byte</item>
     <item quantity="other">Bytes</item>
   </plurals>
@@ -30,13 +29,9 @@
   <string name="proxy_cat">Server Settings</string>
   <string name="profile_name">Profile Name</string>
   <string name="proxy">Server</string>
-  <string name="proxy_summary">Hostname or IP of the remote server</string>
   <string name="remote_port">Remote Port</string>
-  <string name="remote_port_summary">%d (port number of the remote server)</string>
   <string name="port">Local Port</string>
-  <string name="port_summary">%d (port number of the local server)</string>
   <string name="sitekey">Password</string>
-  <string name="sitekey_summary">Password of the remote server</string>
   <string name="enc_method">Encrypt Method</string>
 
   <!-- feature category -->
@@ -44,7 +39,7 @@
   <string name="ipv6">IPv6 Route</string>
   <string name="ipv6_summary">Redirect IPv6 traffic to remote</string>
   <string name="onetime_auth">One-time Authentication</string>
-  <string name="onetime_auth_summary">Enable one-time authentication (Experimental)</string>
+  <string name="onetime_auth_summary">Enable one-time authentication</string>
   <string name="http_proxy">HTTP Proxy</string>
   <string name="http_proxy_summary">Local HTTP Proxy</string>
   <string name="dns_proxy">DNS Proxy</string>
@@ -53,6 +48,14 @@
   <string name="auto_set_gfwlist_summary">Bypass all sites located in China
   </string>
   <string name="route_list">Route</string>
+  <string-array name="route_entry">
+    <item>All</item>
+    <item>Bypass LAN</item>
+    <item>Bypass China</item>
+    <item>Bypass LAN &amp; China</item>
+    <item>GFW List</item>
+    <item>China List</item>
+  </string-array>
   <string name="proxied_apps">Per-App Proxy</string>
   <string name="proxied_apps_summary">Set proxy for selected apps, requires NAT mode under Android 4.x</string>
   <string name="on">On</string>
@@ -60,12 +63,16 @@
   <string name="bypass_apps_summary">Enable this option to bypass selected apps</string>
   <string name="auto_connect">Auto Connect</string>
   <string name="auto_connect_summary">Enable Shadowsocks on startup</string>
+  <string name="tcp_fastopen_summary">Toggling requires ROOT permission</string>
+  <string name="tcp_fastopen_summary_unsupported">Unsupported kernel version: %s &lt; 3.7.1</string>
   <string name="udp_dns">UDP Forwarding</string>
   <string name="udp_dns_summary">Forward UDP packets to remote</string>
 
   <!-- notification category -->
   <string name="forward_success">Shadowsocks started.</string>
+  <string name="invalid_server">Invalid server name</string>
   <string name="service_failed">Failed to connect the remote server</string>
+  <string name="method_unsafe">WARNING: The current encryption method is unsafe</string>
   <string name="nat_deprecated">WARNING: NAT mode has been deprecated since Android 5.0</string>
   <string name="nat_no_root">NAT mode requires ROOT permission</string>
   <string name="switch_to_vpn">Switch to VPN mode</string>
@@ -97,11 +104,11 @@
   <string name="share_message_nfc_disabled">Scan QR code\nAndroid Beam is disabled</string>
   <string name="turn_on_nfc">Turn on NFC &amp; Android Beam</string>
   <string name="flush_dnscache">Flush DNS cache</string>
-  <string name="flush_dnscache_summary">Only useful in NAT mode</string>
-  <string name="flush_dnscache_summary_root">Only useful in NAT mode. Requires ROOT permission.</string>
+  <string name="flush_dnscache_summary">Only useful in NAT mode. Requires ROOT permission.</string>
   <string name="flush_dnscache_no_root">Flush DNS cache cannot proceed without ROOT permission</string>
   <string name="flushing">Flushing</string>
   <string name="add_profile">Add Profile</string>
+  <string name="action_apply_all">Apply Settings to All Profiles</string>
   <string name="action_export">Export to Clipboard</string>
   <string name="action_import">Import from Clipboard</string>
   <string name="action_export_msg">Successfully export!</string>
@@ -111,12 +118,15 @@
 
   <!-- profile -->
   <string name="profile_manager_dialog">Profiles</string>
-  <string name="profile_manager_dialog_content">&#8226; Tap to select a profile;\n&#8226; Swipe to remove;\n&#8226;
-    Long press to reorder profiles.</string>
+  <string name="profile_manager_dialog_content">&#8226; Tap to select a profile;\n&#8226; Swipe left/right or press left
+    to remove;\n&#8226; Long press to reorder profiles.</string>
   <string name="gotcha">Gotcha!</string>
   <string name="add_profile_dialog">Add this Shadowsocks Profile?</string>
   <string name="add_profile_methods_scan_qr_code">Scan QR code</string>
   <string name="add_profile_methods_manual_settings">Manual Settings</string>
+  <string name="add_profile_nfc_hint_title">Use Android Beam (NFC) to add profile</string>
+  <string name="add_profile_nfc_hint">Keep both devices screen on, on the other device, click profile\'s share button, bring them together (back to back).\nYou also can scan a nfc tag.</string>
+  <string name="add_profile_scanner_permission_required">Camera permission is required for scanning QR code.</string>
   <string name="copy_url">Copy URL</string>
   <plurals name="removed">
     <item quantity="one">Removed</item>
@@ -134,4 +144,11 @@
   <!-- status -->
   <string name="sent">Sent:</string>
   <string name="received">Received:</string>
+
+  <!-- kcp -->
+  <string name="kcp" translatable="false">KCP</string>
+  <string name="kcp_summary">Enable Shadowsocks over KCP</string>
+  <string name="kcp_port">KCP Port</string>
+  <string name="kcp_port_summary">%d (port number of the remote KCPTUN server)</string>
+  <string name="kcpcli">KCP Parameters (CLI)</string>
 </resources>

@@ -2,89 +2,119 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
                   xmlns:app="http://schemas.android.com/apk/res/com.github.shadowsocks">
 
-    <PreferenceCategory android:title="@string/global_cat">
-
-        <Preference android:key="profiles" android:summary="@string/profile_summary" android:title="@string/profiles">
-            <intent android:action="com.github.shadowsocks.ProfileManagerActivity"/>
-        </Preference>
-
-        <com.github.shadowsocks.preferences.StatusPreference
-                android:key="stat"
-                android:summary="@string/connection_test_pending"
-                android:title="@string/stat"/>
-
-    </PreferenceCategory>
-
-    <PreferenceCategory
+    <be.mygod.preference.PreferenceCategory
             android:title="@string/proxy_cat">
 
-        <com.github.shadowsocks.preferences.SummaryEditTextPreference
+        <be.mygod.preference.EditTextPreference
                 android:key="profileName"
+                android:persistent="false"
+                android:summary="%s"
                 android:title="@string/profile_name"/>
-        <com.github.shadowsocks.preferences.SummaryEditTextPreference
+        <be.mygod.preference.EditTextPreference
                 android:key="proxy"
-                android:summary="@string/proxy_summary"
+                android:persistent="false"
+                android:summary="%s"
                 android:title="@string/proxy"/>
-        <com.github.shadowsocks.preferences.NumberPickerPreference
+        <be.mygod.preference.NumberPickerPreference
                 app:min="1"
                 app:max="65535"
                 android:key="remotePortNum"
-                android:summary="@string/remote_port_summary"
+                android:persistent="false"
+                android:summary="%d"
                 android:title="@string/remote_port"/>
-        <com.github.shadowsocks.preferences.NumberPickerPreference
+        <be.mygod.preference.NumberPickerPreference
                 app:min="1025"
                 app:max="65535"
                 android:key="localPortNum"
-                android:summary="@string/port_summary"
+                android:persistent="false"
+                android:summary="%d"
                 android:title="@string/port"/>
-        <com.github.shadowsocks.preferences.PasswordEditTextPreference
+        <be.mygod.preference.EditTextPreference
                 android:inputType="textPassword"
                 android:key="sitekey"
-                android:summary="@string/sitekey_summary"
+                android:persistent="false"
+                android:summary="%s"
                 android:title="@string/sitekey"/>
-        <com.github.shadowsocks.preferences.DropDownPreference
+        <android.support.v7.preference.DropDownPreference
                 android:key="encMethod"
-                app:entries="@array/enc_method_entry"
-                app:entryValues="@array/enc_method_value"
+                android:persistent="false"
+                android:entries="@array/enc_method_entry"
+                android:entryValues="@array/enc_method_value"
                 android:summary="%s"
                 android:title="@string/enc_method"/>
         <SwitchPreference
                 android:key="isAuth"
+                android:persistent="false"
                 android:summary="@string/onetime_auth_summary"
                 android:title="@string/onetime_auth"/>
 
-    </PreferenceCategory>
+    </be.mygod.preference.PreferenceCategory>
 
-    <PreferenceCategory
+    <be.mygod.preference.PreferenceCategory
             android:title="@string/feature_cat">
 
-        <com.github.shadowsocks.preferences.DropDownPreference
+        <android.support.v7.preference.DropDownPreference
                 android:key="route"
-                app:entries="@array/route_entry"
-                app:entryValues="@array/route_value"
+                android:persistent="false"
+                android:entries="@array/route_entry"
+                android:entryValues="@array/route_value"
                 android:summary="%s"
                 android:title="@string/route_list"/>
         <SwitchPreference
                 android:key="isIpv6"
+                android:persistent="false"
                 android:summary="@string/ipv6_summary"
                 android:title="@string/ipv6"/>
         <SwitchPreference
                 android:key="isProxyApps"
+                android:persistent="false"
                 android:summary="@string/proxied_apps_summary"
                 android:title="@string/proxied_apps"/>
         <SwitchPreference
                 android:key="isUdpDns"
+                android:persistent="false"
                 android:summary="@string/udp_dns_summary"
                 android:title="@string/udp_dns"/>
 
-    </PreferenceCategory>
+    </be.mygod.preference.PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/misc_cat">
+    <be.mygod.preference.PreferenceCategory
+            android:title="@string/kcp">
+
+        <SwitchPreference
+                android:key="kcp"
+                android:persistent="false"
+                android:summary="@string/kcp_summary"
+                android:title="@string/kcp"/>
+
+        <be.mygod.preference.NumberPickerPreference
+                app:min="1"
+                app:max="65535"
+                android:key="kcpPort"
+                android:persistent="false"
+                android:summary="@string/kcp_port_summary"
+                android:title="@string/kcp_port"/>
+
+        <be.mygod.preference.EditTextPreference
+                android:key="kcpcli"
+                android:persistent="false"
+                android:summary="%s"
+                android:title="@string/kcpcli"/>
+
+    </be.mygod.preference.PreferenceCategory>
+
+    <be.mygod.preference.PreferenceCategory android:title="@string/misc_cat">
 
         <SwitchPreference
                 android:key="isAutoConnect"
+                android:persistent="false"
                 android:summary="@string/auto_connect_summary"
                 android:title="@string/auto_connect"/>
+
+        <SwitchPreference
+                android:key="tcp_fastopen"
+                android:summary="@string/tcp_fastopen_summary"
+                android:title="TCP Fast Open"/>
 
         <SwitchPreference android:key="isNAT"
                           android:title="@string/nat"
@@ -93,10 +123,10 @@
             android:summary="@string/recovery_summary"/>
         <Preference android:key="flush_dnscache"
                     android:title="@string/flush_dnscache"
-                    android:summary="@string/flush_dnscache_summary_root"/>
+                    android:summary="@string/flush_dnscache_summary"/>
         <Preference android:key="about" android:title="@string/about"/>
 
-    </PreferenceCategory>
+    </be.mygod.preference.PreferenceCategory>
 
 
 </PreferenceScreen>

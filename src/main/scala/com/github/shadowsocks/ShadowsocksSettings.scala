@@ -1,46 +1,40 @@
 package com.github.shadowsocks
 
-import java.lang.System.currentTimeMillis
-import java.net.{HttpURLConnection, URL}
 import java.util.Locale
 
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.content.{DialogInterface, Intent, SharedPreferences}
+import android.content.{Intent, SharedPreferences}
 import android.net.Uri
-import android.os.{Build, Bundle}
-import android.preference.{Preference, PreferenceFragment, SwitchPreference}
+import android.os.Bundle
 import android.support.design.widget.Snackbar
+import android.support.v14.preference.SwitchPreference
 import android.support.v7.app.AlertDialog
+import android.support.v7.preference.{DropDownPreference, Preference}
 import android.webkit.{WebView, WebViewClient}
+import com.github.shadowsocks.ShadowsocksApplication.app
 import com.github.shadowsocks.database.Profile
-import com.github.shadowsocks.preferences._
-import com.github.shadowsocks.utils.CloseUtils._
-import com.github.shadowsocks.utils.{Key, Utils}
+import com.github.shadowsocks.preferences.KcpCliPreferenceDialogFragment
+import com.github.shadowsocks.utils.{Key, TcpFastOpen, Utils}
+import be.mygod.preference._
 
 object ShadowsocksSettings {
   // Constants
-  val PREFS_NAME = "Shadowsocks"
-  val PROXY_PREFS = Array(Key.profileName, Key.proxy, Key.remotePort, Key.localPort, Key.sitekey, Key.encMethod,
-    Key.isAuth)
-  val FEATURE_PREFS = Array(Key.route, Key.isProxyApps, Key.isUdpDns, Key.isIpv6)
+  private final val TAG = "ShadowsocksSettings"
+  private val PROXY_PREFS = Array(Key.name, Key.host, Key.remotePort, Key.localPort, Key.password, Key.method,
+    Key.auth, Key.kcp, Key.kcpPort, Key.kcpcli)
+  private val FEATURE_PREFS = Array(Key.route, Key.proxyApps, Key.udpdns, Key.ipv6)
 
   // Helper functions
   def updateDropDownPreference(pref: Preference, value: String) {
     pref.asInstanceOf[DropDownPreference].setValue(value)
   }
 
-  def updatePasswordEditTextPreference(pref: Preference, value: String) {
-    pref.setSummary(value)
-    pref.asInstanceOf[PasswordEditTextPreference].setText(value)
+  def updateEditTextPreference(pref: Preference, value: String) {
+    pref.asInstanceOf[EditTextPreference].setText(value)
   }
 
   def updateNumberPickerPreference(pref: Preference, value: Int) {
     pref.asInstanceOf[NumberPickerPreference].setValue(value)
-  }
-
-  def updateSummaryEditTextPreference(pref: Preference, value: String) {
-    pref.setSummary(value)
-    pref.asInstanceOf[SummaryEditTextPreference].setText(value)
   }
 
   def updateSwitchPreference(pref: Preference, value: Boolean) {
@@ -49,17 +43,20 @@ object ShadowsocksSettings {
 
   def updatePreference(pref: Preference, name: String, profile: Profile) {
     name match {
-      case Key.profileName => updateSummaryEditTextPreference(pref, profile.name)
-      case Key.proxy => updateSummaryEditTextPreference(pref, profile.host)
+      case Key.name => updateEditTextPreference(pref, profile.name)
+      case Key.host => updateEditTextPreference(pref, profile.host)
       case Key.remotePort => updateNumberPickerPreference(pref, profile.remotePort)
       case Key.localPort => updateNumberPickerPreference(pref, profile.localPort)
-      case Key.sitekey => updatePasswordEditTextPreference(pref, profile.password)
-      case Key.encMethod => updateDropDownPreference(pref, profile.method)
+      case Key.password => updateEditTextPreference(pref, profile.password)
+      case Key.method => updateDropDownPreference(pref, profile.method)
       case Key.route => updateDropDownPreference(pref, profile.route)
-      case Key.isProxyApps => updateSwitchPreference(pref, profile.proxyApps)
-      case Key.isUdpDns => updateSwitchPreference(pref, profile.udpdns)
-      case Key.isAuth => updateSwitchPreference(pref, profile.auth)
-      case Key.isIpv6 => updateSwitchPreference(pref, profile.ipv6)
+      case Key.proxyApps => updateSwitchPreference(pref, profile.proxyApps)
+      case Key.udpdns => updateSwitchPreference(pref, profile.udpdns)
+      case Key.auth => updateSwitchPreference(pref, profile.auth)
+      case Key.ipv6 => updateSwitchPreference(pref, profile.ipv6)
+      case Key.kcp => updateSwitchPreference(pref, profile.kcp)
+      case Key.kcpPort => updateNumberPickerPreference(pref, profile.kcpPort)
+      case Key.kcpcli => updateEditTextPreference(pref, profile.kcpcli)
     }
   }
 }
@@ -69,85 +66,118 @@ class ShadowsocksSettings extends PreferenceFragment with OnSharedPreferenceChan
 
   private def activity = getActivity.asInstanceOf[Shadowsocks]
   lazy val natSwitch = findPreference(Key.isNAT).asInstanceOf[SwitchPreference]
-  var stat: StatusPreference = _
 
   private var isProxyApps: SwitchPreference = _
-  private var testCount: Int = _
 
-  override def onCreate(savedInstanceState: Bundle) {
-    super.onCreate(savedInstanceState)
+  override def onCreatePreferences(bundle: Bundle, key: String) {
     addPreferencesFromResource(R.xml.pref_all)
     getPreferenceManager.getSharedPreferences.registerOnSharedPreferenceChangeListener(this)
 
-    stat = findPreference(Key.stat).asInstanceOf[StatusPreference]
-    stat.setOnPreferenceClickListener(_ => {
-      val id = synchronized {
-        testCount += 1
-        activity.handler.post(() => stat.setSummary(R.string.connection_test_testing))
-        testCount
-      }
-      ThrowableFuture {
-        // Based on: https://android.googlesource.com/platform/frameworks/base/+/master/services/core/java/com/android/server/connectivity/NetworkMonitor.java#640
-        autoDisconnect(new URL("https", "www.google.com", "/generate_204").openConnection()
-          .asInstanceOf[HttpURLConnection]) { conn =>
-          conn.setConnectTimeout(5 * 1000)
-          conn.setReadTimeout(5 * 1000)
-          conn.setInstanceFollowRedirects(false)
-          conn.setUseCaches(false)
-          if (testCount == id) {
-            var result: String = null
-            var success = true
-            try {
-              val start = currentTimeMillis
-              conn.getInputStream
-              val elapsed = currentTimeMillis - start
-              val code = conn.getResponseCode
-              if (code == 204 || code == 200 && conn.getContentLength == 0)
-                result = getString(R.string.connection_test_available, elapsed: java.lang.Long)
-              else throw new Exception(getString(R.string.connection_test_error_status_code, code: Integer))
-            } catch {
-              case e: Exception =>
-                success = false
-                result = getString(R.string.connection_test_error, e.getMessage)
-            }
-            synchronized(if (testCount == id) {
-              if (ShadowsocksApplication.isVpnEnabled) activity.handler.post(() => {
-                if (success) stat.setSummary(result) else {
-                  stat.setSummary(R.string.connection_test_fail)
-                  Snackbar.make(activity.findViewById(android.R.id.content), result, Snackbar.LENGTH_LONG).show
-                }
-              })
-            })
-          }
-        }
-      }
-      true
+    findPreference(Key.name).setOnPreferenceChangeListener((_, value) => {
+      profile.name = value.asInstanceOf[String]
+      app.profileManager.updateProfile(profile)
     })
-    stat.setSummary(if (ShadowsocksApplication.isVpnEnabled) getString(R.string.connection_test_pending) else null)
+    findPreference(Key.host).setOnPreferenceChangeListener((_, value) => {
+      profile.host = value.asInstanceOf[String]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.remotePort).setOnPreferenceChangeListener((_, value) => {
+      profile.remotePort = value.asInstanceOf[Int]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.localPort).setOnPreferenceChangeListener((_, value) => {
+      profile.localPort = value.asInstanceOf[Int]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.password).setOnPreferenceChangeListener((_, value) => {
+      profile.password = value.asInstanceOf[String]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.method).setOnPreferenceChangeListener((_, value) => {
+      profile.method = value.asInstanceOf[String]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.route).setOnPreferenceChangeListener((_, value) => {
+      profile.route = value.asInstanceOf[String]
+      app.profileManager.updateProfile(profile)
+    })
 
-    isProxyApps = findPreference(Key.isProxyApps).asInstanceOf[SwitchPreference]
-    isProxyApps.setOnPreferenceClickListener((preference: Preference) => {
+    findPreference(Key.kcp).setOnPreferenceChangeListener((_, value) => {
+      profile.kcp = value.asInstanceOf[Boolean]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.kcpPort).setOnPreferenceChangeListener((_, value) => {
+      profile.kcpPort = value.asInstanceOf[Int]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.kcpcli).setOnPreferenceChangeListener((_, value) => {
+      profile.kcpcli = value.asInstanceOf[String]
+      app.profileManager.updateProfile(profile)
+    })
+
+    isProxyApps = findPreference(Key.proxyApps).asInstanceOf[SwitchPreference]
+    isProxyApps.setOnPreferenceClickListener(_ => {
       startActivity(new Intent(activity, classOf[AppManager]))
       isProxyApps.setChecked(true)
       false
     })
+    isProxyApps.setOnPreferenceChangeListener((_, value) => {
+      profile.proxyApps = value.asInstanceOf[Boolean]
+      app.profileManager.updateProfile(profile)
+    })
+
+    findPreference(Key.udpdns).setOnPreferenceChangeListener((_, value) => {
+      profile.udpdns = value.asInstanceOf[Boolean]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.auth).setOnPreferenceChangeListener((_, value) => {
+      profile.auth = value.asInstanceOf[Boolean]
+      app.profileManager.updateProfile(profile)
+    })
+    findPreference(Key.ipv6).setOnPreferenceChangeListener((_, value) => {
+      profile.ipv6 = value.asInstanceOf[Boolean]
+      app.profileManager.updateProfile(profile)
+    })
+
+    val switch = findPreference(Key.isAutoConnect).asInstanceOf[SwitchPreference]
+    switch.setOnPreferenceChangeListener((_, value) => {
+      BootReceiver.setEnabled(activity, value.asInstanceOf[Boolean])
+      true
+    })
+    if (getPreferenceManager.getSharedPreferences.getBoolean(Key.isAutoConnect, false)) {
+      BootReceiver.setEnabled(activity, true)
+      getPreferenceManager.getSharedPreferences.edit.remove(Key.isAutoConnect).apply
+    }
+    switch.setChecked(BootReceiver.getEnabled(activity))
+
+    val tfo = findPreference(Key.tfo).asInstanceOf[SwitchPreference]
+    tfo.setChecked(TcpFastOpen.sendEnabled)
+    tfo.setOnPreferenceChangeListener((_, v) => {
+      val value = v.asInstanceOf[Boolean]
+      val result = TcpFastOpen.enabled(value)
+      if (result != null && result != "Success.")
+        Snackbar.make(activity.findViewById(android.R.id.content), result, Snackbar.LENGTH_LONG).show()
+      value == TcpFastOpen.sendEnabled
+    })
+    if (!TcpFastOpen.supported) {
+      tfo.setEnabled(false)
+      tfo.setSummary(getString(R.string.tcp_fastopen_summary_unsupported, java.lang.System.getProperty("os.version")))
+    }
 
     findPreference("recovery").setOnPreferenceClickListener((preference: Preference) => {
-      ShadowsocksApplication.track(Shadowsocks.TAG, "reset")
+      app.track(TAG, "reset")
       activity.recovery()
       true
     })
 
-    val flush = findPreference("flush_dnscache")
-    if (Build.VERSION.SDK_INT < 17) flush.setSummary(R.string.flush_dnscache_summary)
-    flush.setOnPreferenceClickListener(_ => {
-      ShadowsocksApplication.track(Shadowsocks.TAG, "flush_dnscache")
+    findPreference("flush_dnscache").setOnPreferenceClickListener(_ => {
+      app.track(TAG, "flush_dnscache")
       activity.flushDnsCache()
       true
     })
 
     findPreference("about").setOnPreferenceClickListener((preference: Preference) => {
-      ShadowsocksApplication.track(Shadowsocks.TAG, "about")
+      app.track(TAG, "about")
       val web = new WebView(activity)
       web.loadUrl("file:///android_asset/pages/about.html")
       web.setWebViewClient(new WebViewClient() {
@@ -162,10 +192,8 @@ class ShadowsocksSettings extends PreferenceFragment with OnSharedPreferenceChan
       })
 
       new AlertDialog.Builder(activity)
-        .setTitle(getString(R.string.about_title).formatLocal(Locale.ENGLISH, ShadowsocksApplication.getVersionName))
-        .setCancelable(false)
-        .setNegativeButton(getString(android.R.string.ok),
-          ((dialog: DialogInterface, id: Int) => dialog.cancel()): DialogInterface.OnClickListener)
+        .setTitle(getString(R.string.about_title).formatLocal(Locale.ENGLISH, BuildConfig.VERSION_NAME))
+        .setNegativeButton(getString(android.R.string.ok), null)
         .setView(web)
         .create()
         .show()
@@ -173,23 +201,43 @@ class ShadowsocksSettings extends PreferenceFragment with OnSharedPreferenceChan
     })
   }
 
-  override def onResume {
-    super.onResume()
-    isProxyApps.setChecked(ShadowsocksApplication.settings.getBoolean(Key.isProxyApps, false))  // update
+  override def onDisplayPreferenceDialog(preference: Preference) = preference match {
+    case _: EditTextPreference => displayPreferenceDialog(preference.getKey,
+      if (preference.getKey == Key.kcpcli) new KcpCliPreferenceDialogFragment()
+      else new EditTextPreferenceDialogFragment())
+    case _: NumberPickerPreference =>
+      displayPreferenceDialog(preference.getKey, new NumberPickerPreferenceDialogFragment())
+    case _ => super.onDisplayPreferenceDialog(preference)
+  }
+
+  def refreshProfile() {
+    profile = app.currentProfile match {
+      case Some(p) => p
+      case None =>
+        app.profileManager.getFirstProfile match {
+          case Some(p) =>
+            app.profileId(p.id)
+            p
+          case None =>
+            val default = app.profileManager.createDefault()
+            app.profileId(default.id)
+            default
+        }
+    }
+    isProxyApps.setChecked(profile.proxyApps)
   }
 
   override def onDestroy {
     super.onDestroy()
-    ShadowsocksApplication.settings.unregisterOnSharedPreferenceChangeListener(this)
+    app.settings.unregisterOnSharedPreferenceChangeListener(this)
   }
 
-  def onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String) = key match {
+  def onSharedPreferenceChanged(pref: SharedPreferences, key: String) = key match {
     case Key.isNAT =>
       activity.handler.post(() => {
-        activity.deattachService
+        activity.detachService
         activity.attachService
       })
-      stat.setSummary(if (ShadowsocksApplication.isVpnEnabled) getString(R.string.connection_test_pending) else null)
     case _ =>
   }
 
@@ -199,18 +247,13 @@ class ShadowsocksSettings extends PreferenceFragment with OnSharedPreferenceChan
     for (name <- Key.isNAT #:: PROXY_PREFS.toStream #::: FEATURE_PREFS.toStream) {
       val pref = findPreference(name)
       if (pref != null) pref.setEnabled(enabled &&
-        (name != Key.isProxyApps || Utils.isLollipopOrAbove || !ShadowsocksApplication.isVpnEnabled))
+        (name != Key.proxyApps || Utils.isLollipopOrAbove || app.isNatEnabled))
     }
   }
 
-  def update(profile: Profile) {
-    for (name <- PROXY_PREFS) {
-      val pref = findPreference(name)
-      updatePreference(pref, name, profile)
-    }
-    for (name <- FEATURE_PREFS) {
-      val pref = findPreference(name)
-      updatePreference(pref, name, profile)
-    }
+  var profile: Profile = _
+  def setProfile(profile: Profile) {
+    this.profile = profile
+    for (name <- Array(PROXY_PREFS, FEATURE_PREFS).flatten) updatePreference(findPreference(name), name, profile)
   }
 }

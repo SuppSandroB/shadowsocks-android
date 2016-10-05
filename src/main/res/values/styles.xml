@@ -6,48 +6,46 @@
         <item name="android:textSize">24sp</item>
     </style>
 
-    <style name="Theme.Material" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="android:alertDialogTheme">@style/Theme.Material.Dialog.Alert</item>
-        <item name="android:dialogTheme">@style/Theme.Material.Dialog</item>
-        <item name="android:navigationBarColor">@color/material_accent_700</item>
-        <item name="colorAccent">@color/material_accent_500</item>
-        <item name="colorButtonNormal">@color/material_accent_500</item>
-        <item name="colorPrimary">@color/material_accent_500</item>
-        <item name="colorPrimaryDark">@color/material_accent_700</item>
+    <style name="Theme.MaterialBase" parent="Theme.AppCompat.Light.NoActionBar">
+        <!--suppress NewApi -->
+        <item name="android:navigationBarColor">@color/material_primary_700</item>
+        <item name="colorAccent">@color/material_primary_500</item>
+        <item name="colorButtonNormal">@color/material_primary_500</item>
+        <item name="colorPrimary">@color/material_primary_500</item>
+        <item name="colorPrimaryDark">@color/material_primary_700</item>
+        <item name="preferenceTheme">@style/Theme.Material.PreferenceThemeOverlay</item>
     </style>
 
-    <style name="Theme.Material.DialogBase" parent="Theme.AppCompat.Light.Dialog">
-        <item name="colorAccent">@color/material_accent_500</item>
-        <item name="colorPrimary">@color/material_accent_500</item>
-        <item name="colorPrimaryDark">@color/material_accent_700</item>
-    </style>
-
-    <style name="Theme.Material.Dialog.AlertBase" parent="Theme.AppCompat.Light.Dialog.Alert">
-        <item name="colorAccent">@color/material_accent_500</item>
-        <item name="colorPrimary">@color/material_accent_500</item>
-        <item name="colorPrimaryDark">@color/material_accent_700</item>
-    </style>
-
-    <style name="Theme.Material.Dialog" parent="Theme.Material.DialogBase">
-        <item name="android:windowBackground">@android:color/transparent</item>
-    </style>
-
-    <style name="Theme.Material.Dialog.Alert" parent="Theme.Material.Dialog.AlertBase">
-        <item name="android:windowBackground">@android:color/transparent</item>
-    </style>
-
-    <style name="PopupTheme" parent="Theme.Material.Dialog">
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowSoftInputMode">stateAlwaysHidden</item>
-        <item name="android:colorBackgroundCacheHint">@null</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-    </style>
-
-    <style name="PopupTheme.QuickSwitch" parent="PopupTheme">
+    <style name="Theme.Material.Dialog" parent="Theme.AppCompat.Light.Dialog">
+        <item name="colorAccent">@color/material_primary_500</item>
+        <item name="colorButtonNormal">@color/material_accent_200</item>
+        <item name="colorPrimary">@color/material_primary_500</item>
+        <item name="colorPrimaryDark">@color/material_primary_700</item>
+        <item name="preferenceTheme">@style/Theme.Material.PreferenceThemeOverlay</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+    </style>
+
+    <!-- Fix for wrong padding on v17-v20 based on: https://github.com/Gericop/Android-Support-Preference-V7-Fix/blob/a6082cb/preference-v7/src/main/res/values-v17/styles.xml -->
+    <style name="Theme.Material" parent="Theme.MaterialBase">
+        <item name="android:listPreferredItemPaddingStart">16dp</item>
+        <item name="android:listPreferredItemPaddingEnd">16dp</item>
+    </style>
+    <!-- This is needed because the default PreferenceCategory appearance doesn't use bold text style -->
+    <style name="Preference_TextAppearanceMaterialBody2">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+    <style name="Theme.Material.PreferenceThemeOverlay" parent="@style/PreferenceThemeOverlay.v14.Material">
+        <item name="preferenceFragmentListStyle">@style/Theme.Material.PreferenceFragmentList</item>
+    </style>
+    <style name="Theme.Material.PreferenceFragmentList" parent="@style/PreferenceFragmentList.Material">
+        <item name="android:fadeScrollbars">true</item>
+        <item name="android:scrollbars">vertical</item>
+    </style>
+    <style name="NumberPickerStyle">
+        <item name="android:textSize">14sp</item>
     </style>
 
 </resources>
