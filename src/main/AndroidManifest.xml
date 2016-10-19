@@ -1,7 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          xmlns:tools="http://schemas.android.com/tools" package="com.github.shadowsocks"
-          android:versionCode="163"
-          android:versionName="3.2.3">
+          xmlns:tools="http://schemas.android.com/tools" package="com.github.shadowsocks">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -158,6 +156,18 @@
                 <action android:name="com.twofortyfouram.locale.intent.action.FIRE_SETTING"/>
             </intent-filter>
         </receiver>
+
+        <!-- android-job components -->
+        <service android:name="com.evernote.android.job.v21.PlatformJobService"
+                 android:process=":bg"/>
+        <service android:name="com.evernote.android.job.v14.PlatformAlarmService"
+                 android:process=":bg"/>
+        <service android:name="com.evernote.android.job.gcm.PlatformGcmService"
+                 android:process=":bg"/>
+        <receiver android:name="com.evernote.android.job.v14.PlatformAlarmReceiver"
+                  android:process=":bg"/>
+        <receiver android:name="com.evernote.android.job.JobBootReceiver"
+                  android:process=":bg"/>
     </application>
 
 </manifest>

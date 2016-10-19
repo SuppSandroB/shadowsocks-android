@@ -35,7 +35,7 @@
                 android:persistent="false"
                 android:summary="%s"
                 android:title="@string/sitekey"/>
-        <android.support.v7.preference.DropDownPreference
+        <DropDownPreference
                 android:key="encMethod"
                 android:persistent="false"
                 android:entries="@array/enc_method_entry"
@@ -53,7 +53,7 @@
     <be.mygod.preference.PreferenceCategory
             android:title="@string/feature_cat">
 
-        <android.support.v7.preference.DropDownPreference
+        <DropDownPreference
                 android:key="route"
                 android:persistent="false"
                 android:entries="@array/route_entry"
@@ -121,9 +121,6 @@
                           android:summary="@string/nat_summary"/>
         <Preference android:key="recovery" android:title="@string/recovery"
             android:summary="@string/recovery_summary"/>
-        <Preference android:key="flush_dnscache"
-                    android:title="@string/flush_dnscache"
-                    android:summary="@string/flush_dnscache_summary"/>
         <Preference android:key="about" android:title="@string/about"/>
 
     </be.mygod.preference.PreferenceCategory>

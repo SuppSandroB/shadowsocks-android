@@ -9,13 +9,8 @@ import com.github.shadowsocks.utils.{State, Utils}
 /**
   * @author Mygod
   */
-object ShadowsocksTileService {
-  var running: Boolean = _
-}
-
 @TargetApi(24)
 final class ShadowsocksTileService extends TileService with ServiceBoundContext {
-  import ShadowsocksTileService._
 
   private lazy val iconIdle = Icon.createWithResource(this, R.drawable.ic_start_idle).setTint(0x80ffffff)
   private lazy val iconBusy = Icon.createWithResource(this, R.drawable.ic_start_busy)
@@ -45,15 +40,6 @@ final class ShadowsocksTileService extends TileService with ServiceBoundContext 
   }
 
   override def onServiceConnected() = callback.stateChanged(bgService.getState, bgService.getProfileName, null)
-
-  override def onCreate {
-    super.onCreate
-    running = true
-  }
-  override def onDestroy {
-    super.onDestroy
-    running = false
-  }
 
   override def onStartListening {
     super.onStartListening

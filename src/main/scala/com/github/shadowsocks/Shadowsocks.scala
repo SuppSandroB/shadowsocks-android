@@ -38,17 +38,14 @@
  */
 package com.github.shadowsocks
 
-import java.io.{FileOutputStream, IOException, InputStream, OutputStream}
 import java.lang.System.currentTimeMillis
 import java.net.{HttpURLConnection, URL}
-import java.util.Date
-import java.util.Hashtable
-import java.util.Locale
+import java.util
+import java.util.{GregorianCalendar, Locale}
 
 import android.app.backup.BackupManager
 import android.app.{Activity, ProgressDialog}
 import android.content._
-import android.content.res.AssetManager
 import android.graphics.Typeface
 import android.net.VpnService
 import android.os._
@@ -66,9 +63,7 @@ import com.github.shadowsocks.database._
 import com.github.shadowsocks.utils.CloseUtils._
 import com.github.shadowsocks.utils._
 import com.google.android.gms.ads.{AdRequest, AdSize, AdView}
-import eu.chainfire.libsuperuser.Shell
 
-import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
 object Typefaces {
@@ -89,15 +84,13 @@ object Typefaces {
   }
 
   private final val TAG = "Typefaces"
-  private final val cache = new Hashtable[String, Typeface]
+  private final val cache = new util.Hashtable[String, Typeface]
 }
 
 object Shadowsocks {
   // Constants
   private final val TAG = "Shadowsocks"
   private final val REQUEST_CONNECT = 1
-  private val EXECUTABLES = Array(Executable.PDNSD, Executable.REDSOCKS, Executable.SS_TUNNEL, Executable.SS_LOCAL,
-    Executable.TUN2SOCKS, Executable.KCPTUN)
 }
 
 class Shadowsocks extends AppCompatActivity with ServiceBoundContext {
@@ -187,14 +180,6 @@ class Shadowsocks extends AppCompatActivity with ServiceBoundContext {
       snackbar.setAction(R.string.switch_to_vpn, (_ => preferences.natSwitch.setChecked(false)): View.OnClickListener)
       snackbar.show
     }
-
-    if (app.settings.getInt(Key.currentVersionCode, -1) != BuildConfig.VERSION_CODE) {
-      app.editor.putInt(Key.currentVersionCode, BuildConfig.VERSION_CODE).apply()
-
-      recovery()
-
-      updateCurrentProfile()
-    }
   }
 
   override def onServiceDisconnected() {
@@ -202,8 +187,8 @@ class Shadowsocks extends AppCompatActivity with ServiceBoundContext {
   }
 
   override def binderDied {
-    detachService
-    crashRecovery
+    detachService()
+    app.crashRecovery()
     attachService
   }
 
@@ -239,70 +224,6 @@ class Shadowsocks extends AppCompatActivity with ServiceBoundContext {
         clearDialog()
       }
     }
-  }
-
-  private def copyAssets(path: String) {
-    val assetManager: AssetManager = getAssets
-    var files: Array[String] = null
-    try {
-      files = assetManager.list(path)
-    } catch {
-      case e: IOException =>
-        Log.e(TAG, e.getMessage)
-        app.track(e)
-    }
-    if (files != null) {
-      for (file <- files) {
-        var in: InputStream = null
-        var out: OutputStream = null
-        try {
-          if (path.length > 0) {
-            in = assetManager.open(path + "/" + file)
-          } else {
-            in = assetManager.open(file)
-          }
-          out = new FileOutputStream(getApplicationInfo.dataDir + "/" + file)
-          copyFile(in, out)
-          in.close()
-          in = null
-          out.flush()
-          out.close()
-          out = null
-        } catch {
-          case ex: Exception =>
-            Log.e(TAG, ex.getMessage)
-            app.track(ex)
-        }
-      }
-    }
-  }
-
-  private def copyFile(in: InputStream, out: OutputStream) {
-    val buffer: Array[Byte] = new Array[Byte](1024)
-    var read: Int = 0
-    while ( {
-      read = in.read(buffer)
-      read
-    } != -1) {
-      out.write(buffer, 0, read)
-    }
-  }
-
-  def crashRecovery() {
-    val cmd = new ArrayBuffer[String]()
-
-    for (task <- Array("ss-local", "ss-tunnel", "pdnsd", "redsocks", "tun2socks", "kcptun")) {
-      cmd.append("killall %s".formatLocal(Locale.ENGLISH, task))
-      cmd.append("rm -f %1$s/%2$s-nat.conf %1$s/%2$s-vpn.conf"
-        .formatLocal(Locale.ENGLISH, getApplicationInfo.dataDir, task))
-    }
-    if (app.isNatEnabled) {
-      cmd.append("iptables -t nat -F OUTPUT")
-      cmd.append("echo done")
-      val result = Shell.SU.run(cmd.toArray)
-      if (result != null && !result.isEmpty) return // fallback to SH
-    }
-    Shell.SH.run(cmd.toArray)
   }
 
   def cancelStart() {
@@ -497,7 +418,7 @@ class Shadowsocks extends AppCompatActivity with ServiceBoundContext {
       val year = 1975 + random.nextInt(40)
       val month = 1 + random.nextInt(12)
       val day = random.nextInt(28)
-      adBuilder.setBirthday(new Date(year, month, day))
+      adBuilder.setBirthday(new GregorianCalendar(year, month, day).getTime)
 
       // Load Ad
       adView.loadAd(adBuilder.build())
@@ -523,33 +444,11 @@ class Shadowsocks extends AppCompatActivity with ServiceBoundContext {
     handler.removeCallbacksAndMessages(null)
   }
 
-  def reset() {
-    crashRecovery()
-
-    copyAssets(System.getABI)
-    copyAssets("acl")
-
-    val ab = new ArrayBuffer[String]
-    for (executable <- EXECUTABLES) {
-      ab.append("chmod 755 " + getApplicationInfo.dataDir + "/" + executable)
-    }
-    Shell.SH.run(ab.toArray)
-  }
-
   def recovery() {
     if (serviceStarted) serviceStop()
     val h = showProgress(R.string.recovering)
     Utils.ThrowableFuture {
-      reset()
-      h.sendEmptyMessage(0)
-    }
-  }
-
-  def flushDnsCache() {
-    val h = showProgress(R.string.flushing)
-    Utils.ThrowableFuture {
-      if (!Utils.toggleAirplaneMode(getBaseContext)) h.post(() => Snackbar.make(findViewById(android.R.id.content),
-        R.string.flush_dnscache_no_root, Snackbar.LENGTH_LONG).show)
+      app.copyAssets()
       h.sendEmptyMessage(0)
     }
   }
